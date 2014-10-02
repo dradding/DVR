@@ -16,6 +16,8 @@ class DVRouter (Entity):
 
     def handle_rx (self, packet, port):
         # Add your code here!
+        print self.dv
+        print self.neighbor_ports
         if isinstance(packet, DiscoveryPacket):
             self.handle_dp(packet, port)
         elif isinstance(packet, RoutingUpdate):
@@ -70,7 +72,7 @@ class DVRouter (Entity):
     	if self.neighbor_latency.has_key(packet.src):
     		latency = self.neighbor_latency[packet.src]
     	else:
-    		latency = float("inf")
+			latency = float("inf")
     	send_update = False
     	destinations = packet.all_dests()
     	for dest in destinations: #add tie breaking via lower port number
@@ -101,5 +103,6 @@ class DVRouter (Entity):
 				self.send_RU(ru)
 
     def send_RU(self, RU):
-    	for port_number in self.neighbor_ports:
-    		self.send(RU, self.neighbor_ports[port_number])
+    	for dest in self.neighbor_ports:
+    		if isinstance(dest, DVRouter):
+    			self.send(RU, self.neighbor_ports[dest])
