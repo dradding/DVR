@@ -37,7 +37,7 @@ class DVRouter (Entity):
             if (isinstance(packet.src, BasicHost)):
                 self.dv[packet.src] = [packet.src, packet.latency]
                 self.my_hosts[packet.src] = packet.latency
-            elif(isinstance(packet.src, DVRouter)):
+            elif(isinstance(packet.src, Entity)):
                 self.neighbor_latency[packet.src] = packet.latency
                 #self.neighbor_ports[packet.src] = port
                 update_to_send.paths = self.my_hosts
@@ -53,7 +53,7 @@ class DVRouter (Entity):
                 self.my_hosts[packet.src] = packet.latency
                 self.send_RU(update_to_send)
 
-            elif (isinstance(packet.src, DVRouter)):
+            elif (isinstance(packet.src, Entity)):
                 self.neighbor_latency[packet.src] = float("inf")
 
 
@@ -64,6 +64,7 @@ class DVRouter (Entity):
 			self.dv_neighbors[packet.src] = {dest:packet.get_distance(dest)}
 
     def handle_ru(self, packet):
+        print self.dv
         print "hello RU"
 
     	ru = RoutingUpdate()
