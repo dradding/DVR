@@ -67,7 +67,10 @@ class DVRouter (Entity):
         print "hello RU"
 
     	ru = RoutingUpdate()
-    	latency = self.neighbor_latency[packet.src]
+    	if self.neighbor_latency.has_key(packet.src):
+    		latency = self.neighbor_latency[packet.src]
+    	else:
+    		latency = float("inf")
     	send_update = False
     	destinations = packet.all_dests()
     	for dest in destinations: #add tie breaking via lower port number
