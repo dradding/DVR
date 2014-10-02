@@ -7,7 +7,7 @@ Create your distance vector router in this file.
 class DVRouter (Entity):
     def __init__(self):
         # Add your code here!
-        self.dv = {} # destination: (next_hop, cost to dest)
+        self.dv = {} # destination: [next_hop, cost to dest]
         self.dv_neighbors = {} # neighbor: neighbor DV
         self.neighbor_ports = {} #Key is neighbor, value is ports
         self.neighbor_latency = {} #neighbor: link-latency
@@ -36,23 +36,24 @@ class DVRouter (Entity):
             update_to_send.add_destination(packet.src, packet.latency)
         self.sendRU(update_to_send)
 
-
-
-
     def handle_ru(self, packet):
     	ru = RoutingUpdate()
     	latency = self.neighbor_latency[packet.src]
     	send_update = False
     	destinations = packet.all_dests()
     	for dest in destinations: #add tie breaking via lower port number
-    			if self.dv.has_key(dest):
-    				if packet.get_distance[dest] + latency < self.dv[dest][1]:
-    					self.dv[key][1] = packet.get_distance[dest]
-    					send_update = True
-    					#Update RU object here
-    			else:
-    				self.dv[dest] = packet.get_distance(dest) + latency
+			if self.dv.has_key(dest):
+				if packet.get_distance[dest] + latency < self.dv[dest][1]:
+					self.dv[dest] = [packet.src, packet.get_distance[dest] + latency]
+					send_update = True
+					ru.add_destination(dest, self.dv[dest][1])
+					#Update RU object here
+			else:
+				send_update = True
+				self.dv[dest] = [packet.src, packet.get_distance[dest] + latency]
+				ru.add_destination(dest, self.dv[dest][1])
 
+			self.send_RU(ru)
 
     # def update_dv(self, src, change_type): #src is the node that sent an updated dv
     # 	#Check to see if DV needs update. If updated, send routing update
