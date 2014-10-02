@@ -11,18 +11,21 @@ class DVRouter (Entity):
         self.dv_neighbors = {} # neighbor: neighbor DV
         self.neighbor_ports = {} #Key is neighbor, value is ports
         self.neighbor_latency = {} #neighbor: link-latency
+        self.my_hosts = {} #host: link-latency
+
 
     def handle_rx (self, packet, port):
         # Add your code here!
         if isinstance(packet, DiscoveryPacket):
-        	self.handle_dp(packet, port)
+            self.handle_dp(packet, port)
         elif isinstance(packet, RoutingUpdate):
         	self.handle_ru(packet)
         else: #Data packet, foward approroately
         	#Look up best path in DV, send to appropriate neighbor
-			print packet.src
-			print self.dv
-			self.handle_data(packet)
+            print packet.src
+            print "dv "
+            print self.dv
+            self.handle_data(packet)
 
     def handle_data(self, packet):
         next_hop = self.dv[packet.dst][0]
@@ -34,17 +37,28 @@ class DVRouter (Entity):
         print "hello DP"
         update_to_send = RoutingUpdate()
         if (packet.is_link_up):
-            self.dv[packet.src] = (packet.src, packet.latency)
+            if (isinstance(packet.src, BasicHost)):
+                self.dv[packet.src] = [packet.src, packet.latency]
+                self.my_hosts[packet.src] = packet.latency
+            elif(isinstance(packet.src, DVRouter)):
+                self.neighbor_latency[packet.src] = packet.latency
+                #self.neighbor_ports[packet.src] = port
+                update_to_send.paths = self.my_hosts
+                self.send_RU(update_to_send)
+            # self.dv[packet.dst] = [packet.src, packet.latency]
             self.neighbor_ports[packet.src] = port
-            self.neighbor_latency[packet.src] = packet.latency
-            update_to_send.add_destination(packet.src, packet.latency)
+            # self.neighbor_latency[packet.src] = packet.latency
 
         elif (packet.is_link_up == False): #how to handle ports going down??
-            self.dv[packet.src] = (packet.src, float("inf"))
-            self.neighbor_latency[packet.src] = float("inf")
+            if (isinstance(packet.src, BasicHost)):
+                self.dv[packet.src] = (self, float("inf"))
+                update_to_send.add_destination(packet.src, packet.latency)
+                self.my_hosts[packet.src] = packet.latency
+                self.send_RU(update_to_send)
 
-            update_to_send.add_destination(packet.src, packet.latency)
-        self.send_RU(update_to_send)
+            elif (isinstance(packet.src, DVRouter)):
+                self.neighbor_latency[packet.src] = float("inf")
+
 
     def update_dv_neighbors(self, packet, dest):
 		if self.dv_neighbors.has_key(packet.src):
@@ -54,6 +68,7 @@ class DVRouter (Entity):
 
     def handle_ru(self, packet):
         print "hello RU"
+
     	ru = RoutingUpdate()
     	latency = self.neighbor_latency[packet.src]
     	send_update = False
