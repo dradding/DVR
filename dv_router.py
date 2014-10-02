@@ -20,8 +20,9 @@ class DVRouter (Entity):
         	self.handle_ru(packet)
         else: #Data packet, foward approroately
         	#Look up best path in DV, send to appropriate neighbor
-            self.handle_data(packet)
-
+			print packet.src
+			print self.dv
+			self.handle_data(packet)
 
     def handle_data(self, packet):
         next_hop = self.dv[packet.dst][0]
@@ -45,6 +46,12 @@ class DVRouter (Entity):
             update_to_send.add_destination(packet.src, packet.latency)
         self.send_RU(update_to_send)
 
+    def update_dv_neighbors(self, packet, dest):
+		if self.dv_neighbors.has_key(packet.src):
+			self.dv_neighbors[packet.src][dest] = packet.get_distance(dest)
+		else:
+			self.dv_neighbors[packet.src] = {dest:packet.get_distance(dest)}
+
     def handle_ru(self, packet):
         print "hello RU"
     	ru = RoutingUpdate()
@@ -52,7 +59,19 @@ class DVRouter (Entity):
     	send_update = False
     	destinations = packet.all_dests()
     	for dest in destinations: #add tie breaking via lower port number
+			self.update_dv_neighbors(packet, dest)
 			if self.dv.has_key(dest):
+				if self.dv[dest][0] == packet.src and packet.get_distance(dest) + latency > self.dv[dest][1]:
+					new_next_hop = packet.src
+					new_cost = packet.get_distance(dest) + latency
+					for n in self.dv_neighbors:
+						if self.dv_neighbors[n].has_key(dest):
+							if self.dv_neighbors[n][dest] + self.neighbor_latency[n] < new_cost:
+								new_next_hop = n
+								new_cost = self.dv_neighbors[n][dest] + self.neighbor_latency[n]
+								send_update = True
+								ru.add_destination(dest, self.dv_neighbors[n][dest] + self.neighbor_latency[n])
+
 				if packet.get_distance(dest) + latency < self.dv[dest][1]:
 					self.dv[dest] = [packet.src, packet.get_distance(dest) + latency]
 					send_update = True
@@ -62,36 +81,9 @@ class DVRouter (Entity):
 				send_update = True
 				self.dv[dest] = [packet.src, packet.get_distance(dest) + latency]
 				ru.add_destination(dest, self.dv[dest][1])
-
-			self.send_RU(ru)
-
-    # def update_dv(self, src, change_type): #src is the node that sent an updated dv
-    # 	#Check to see if DV needs update. If updated, send routing update
-    # 	#Check for changes when latency changes
-    # 	#Eventually add Poison and Split Horizon
-    # 	send_update = False #Set to True if  Routing Update should be sent
-    # 	latency = self.neighbor_latency[src]
-    # 	if change_type == "DP": #Only called when link is lost. When link is added, handle_rx will handle it
-    # 		for key in self.dv:
-    # 			if self.dv[key] == src:
-    # 				for n in self.dv_neighbors: #n is a neighbor
-    # 					if self.dv_neighbors[n].has_key(key) #if the n contains a key then a path exists
-    # 						if self.dv_neighbors[n][key] < self.dv_neighbors[self.dv[key]]: 
-    # 							self.dv[key] = n
-    # 							send_update = True
-    # 							#Update RU object here
-
-    # 	elif change_type == "RU":
-    # 		for key in self.dv_neighbors[src]: #add tie breaking by lower port number
-    # 			if self.dv.has_key(key):
-    # 				if self.dv_neighbors[src][key] < self.dv_neighbors[self.dv[key]]:
-    # 					self.dv[key] = src
-    # 					send_update = True
-    # 					#Update RU object here
-    # 			else:
-    # 				self.dv[key] = src
-    # 	else:
-    # 		pass
+		
+			if send_update:
+				self.send_RU(ru)
 
     def send_RU(self, RU):
     	for port_number in self.neighbor_ports:
