@@ -15,15 +15,14 @@ class DVRouter (Entity):
     def handle_rx (self, packet, port):
         # Add your code here!
         if isinstance(packet, DiscoveryPacket):
-        	dv_update = handle_dp(packet, port)
-            self.send(dv_update, port)
+            handle_dp(packet, port)
         elif isinstance(packet, RoutingUpdate):
         	handle_ru(packet)
         else: #Data packet, foward approroately
         	#Look up best path in DV, send to appropriate neighbor
         	self.send(packet, packet.dst, flood=False)
 
-    def handle_dp(self, packet, port):
+    def handle_dp(self, packet, port): #takes in a discovery packet
         update_to_send = RoutingUpdate()
         if (packet.is_link_up):
             self.dv[packet.src] = (packet.src, packet.latency)
@@ -35,7 +34,8 @@ class DVRouter (Entity):
             self.dv[packet.src] = (packet.src, float("inf"))
             self.neighbor_latency[packet.src] = float("inf")
             update_to_send.add_destination(packet.src, packet.latency)
-        return update_to_send
+        self.sendRU(update_to_send)
+
 
 
 
