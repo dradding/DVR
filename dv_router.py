@@ -30,6 +30,11 @@ class DVRouter (Entity):
         	#Look up best path in DV, send to appropriate neighbor
         	self.send(packet, packet.dst, flood=False)
 
+    def handle_dp(self):
+
+    def handle_ru(self):
+
+
     def update_dv(self, src, change_type): #src is the node that sent an updated dv
     	#Check to see if DV needs update. If updated, send routing update
     	#Check for changes when latency changes
@@ -38,12 +43,12 @@ class DVRouter (Entity):
     	latency = self.neighbor_latency[src]
     	if change_type == "DP": #Only called when link is lost. When link is added, handle_rx will handle it
     		for key in self.dv:
-    			if self.dv[key] = src:
+    			if self.dv[key] == src:
     				for n in self.dv_neighbors: #n is a neighbor
     					if self.dv_neighbors[n].has_key(key) #if the n contains a key then a path exists
     						if self.dv_neighbors[n][key] < self.dv_neighbors[self.dv[key]]: 
     							self.dv[key] = n
-    							send_update=True
+    							send_update = True
     							#Update RU object here
 
     	elif change_type == "RU":
@@ -57,6 +62,6 @@ class DVRouter (Entity):
     				self.dv[key] = src
     	else:
     		pass
-    def send_RU(self):
+    def send_RU(self, RU):
     	for n in self.neighbor_ports:
     		self.send(RU, n, self.neighbor_ports[0])
