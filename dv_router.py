@@ -15,9 +15,9 @@ class DVRouter (Entity):
     def handle_rx (self, packet, port):
         # Add your code here!
         if isinstance(packet, DiscoveryPacket):
-            handle_dp(packet, port)
+        	self.handle_dp(packet, port)
         elif isinstance(packet, RoutingUpdate):
-        	handle_ru(packet)
+        	self.handle_ru(packet)
         else: #Data packet, foward approroately
         	#Look up best path in DV, send to appropriate neighbor
         	self.send(packet, packet.dst, flood=False)
@@ -39,18 +39,19 @@ class DVRouter (Entity):
 
 
 
-    def handle_ru(self, update):
+    def handle_ru(self, packet):
     	ru = RoutingUpdate()
-    	latency = self.neighbor_latency[src]
+    	latency = self.neighbor_latency[packet.src]
     	send_update = False
-    	for key in self.dv_neighbors[src]: #add tie breaking by lower port number
-    			if self.dv.has_key(key):
-    				if self.dv_neighbors[src][key] < self.dv_neighbors[self.dv[key]]:
+    	destinations = packet.all_dests()
+    	for dest in destinations: #add tie breaking via lower port number
+    			if self.dv.has_key(dest):
+    				if packet. < self.dv_neighbors[self.dv[key]]:
     					self.dv[key] = src
     					send_update = True
     					#Update RU object here
     			else:
-    				self.dv[key] = src
+    				self.dv[dest] = packet.get_dest(dest) + latency
 
 
     def update_dv(self, src, change_type): #src is the node that sent an updated dv
@@ -83,4 +84,4 @@ class DVRouter (Entity):
 
     def send_RU(self, RU):
     	for n in self.neighbor_ports:
-    		self.send(RU, n, self.neighbor_ports[0])
+    		self.send(RU, self.neighbor_ports[n])
