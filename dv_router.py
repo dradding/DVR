@@ -20,8 +20,8 @@ class DVRouter (Entity):
         	self.handle_ru(packet)
         else: #Data packet, foward approroately
         	#Look up best path in DV, send to appropriate neighbor
-			print packet.src
 			print self.dv
+			#print self.dv_neighbors
 			self.handle_data(packet)
 
     def handle_data(self, packet):
