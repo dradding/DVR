@@ -30,9 +30,10 @@ class DVRouter (Entity):
             self.neighbor_latency[packet.src] = packet.latency
             update_to_send.add_destination(packet.src, packet.latency)
 
-        elif !(packet.is_link_up):
+        elif !(packet.is_link_up): #how to handle ports going down??
             self.dv[packet.src] = (packet.src, float("inf"))
             self.neighbor_latency[packet.src] = float("inf")
+
             update_to_send.add_destination(packet.src, packet.latency)
         self.sendRU(update_to_send)
 
@@ -83,5 +84,5 @@ class DVRouter (Entity):
     		pass
 
     def send_RU(self, RU):
-    	for n in self.neighbor_ports:
-    		self.send(RU, self.neighbor_ports[n])
+    	for port_number in self.neighbor_ports:
+    		self.send(RU, self.neighbor_ports[port_number])
