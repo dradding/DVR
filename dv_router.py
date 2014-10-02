@@ -7,7 +7,7 @@ Create your distance vector router in this file.
 class DVRouter (Entity):
     def __init__(self):
         # Add your code here!
-        self.dv = {} # destination: (total cost to dest, next-hop)
+        self.dv = {} # destination: (next_hop, cost to dest)
         self.dv_neighbors = {} # neighbor: neighbor DV
         self.neighbor_ports = {} #Key is neighbor, value is ports
         self.neighbor_latency = {} #neighbor: link-latency
@@ -23,13 +23,19 @@ class DVRouter (Entity):
         	self.send(packet, packet.dst, flood=False)
 
     def handle_dp(self, packet, port):
+        update_to_send = RoutingUpdate()
         if (packet.is_link_up):
-            self.dv[]
-
-
-
+            self.dv[packet.src] = (packet.src, packet.latency)
+            self.neighbor_ports[packet.src] = port
+            self.neighbor_latency[packet.src] = packet.latency
+            update_to_send.add_destination(packet.src, packet.latency)
 
         elif !(packet.is_link_up):
+            self.dv[packet.src] = (packet.src, float("inf"))
+            self.neighbor_latency[packet.src] = float("inf")
+            update_to_send.add_destination(packet.src, packet.latency)
+        return update_to_send
+
 
 
     def handle_ru(self, packet):
