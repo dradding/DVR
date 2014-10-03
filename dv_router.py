@@ -16,7 +16,6 @@ class DVRouter (Entity):
 
     def handle_rx (self, packet, port):
         # Add your code here!
-        print self.neighbor_ports
         if isinstance(packet, DiscoveryPacket):
             self.handle_dp(packet, port)
         elif isinstance(packet, RoutingUpdate):
@@ -28,11 +27,11 @@ class DVRouter (Entity):
     def handle_data(self, packet):
         next_hop = self.dv[packet.dst][0]
         port_num = self.neighbor_ports[next_hop]
-
+        print next_hop
         self.send(packet, port_num)
 
     def handle_dp(self, packet, port): #takes in a discovery packet
-        print "hello DP"
+        #print "hello DP"
         update_to_send = RoutingUpdate()
         if (packet.is_link_up):
             if (isinstance(packet.src, BasicHost)):
@@ -65,7 +64,7 @@ class DVRouter (Entity):
 			self.dv_neighbors[packet.src] = {dest:packet.get_distance(dest)}
 
     def handle_ru(self, packet):
-        print "hello RU"
+        #print "hello RU"
 
     	ru = RoutingUpdate()
     	if self.neighbor_latency.has_key(packet.src):
@@ -102,5 +101,13 @@ class DVRouter (Entity):
 				self.send_RU(ru)
 
     def send_RU(self, RU):
-    	for port_number in self.neighbor_ports:
-    		self.send(RU, self.neighbor_ports[port_number])
+    	dests = RU.all_dests()
+    	for key in self.neighbor_ports:
+    		if not isinstance(key, BasicHost):
+    			Custom_RU = RoutingUpdate()
+    			for dest in dests:
+    				if self.dv[dest][0] == key:
+    					Custom_RU.add_destination(dest, float("inf"))
+    				else:
+    					Custom_RU.add_destination(dest, RU.get_distance(dest))
+    			self.send(Custom_RU, self.neighbor_ports[key])
