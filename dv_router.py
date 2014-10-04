@@ -38,6 +38,8 @@ class DVRouter (Entity):
                 self.dv[packet.src] = [packet.src, packet.latency]
                 self.my_hosts[packet.src] = packet.latency
                 self.neighbor_latency[packet.src] = packet.latency
+                update_to_send.add_destination(packet.src, packet.latency)
+                self.send_RU(update_to_send)
             elif(isinstance(packet.src, Entity)):
                 self.neighbor_latency[packet.src] = packet.latency
                 #self.neighbor_ports[packet.src] = port
@@ -53,11 +55,13 @@ class DVRouter (Entity):
                 update_to_send.add_destination(packet.src, packet.latency)
                 self.my_hosts[packet.src] = packet.latency
                 self.send_RU(update_to_send)
+                self.update_dv(packet.src)
 
             elif (isinstance(packet.src, Entity)):
                 self.neighbor_latency[packet.src] = float("inf")
                 update_to_send.paths = self.neighbor_latency
                 self.send_RU(update_to_send)
+                self.update_dv(packet.src)
     
     def update_dv_neighbors(self, packet, dest):
 		if self.dv_neighbors.has_key(packet.src):
@@ -66,19 +70,19 @@ class DVRouter (Entity):
 			self.dv_neighbors[packet.src] = {dest:packet.get_distance(dest)}
 
     def update_dv(self, neighbor):
-		latency = self.neighbor_latency(neighbor_latency)
+		latency = self.neighbor_latency[neighbor]
 		ru = RoutingUpdate()
 		for dest in self.dv:
 			if self.dv[dest][0] == neighbor:
 				new_next_hop = neighbor
-				new_cost = self.dv_neighbors[neighbor] + latency
+				new_cost = self.dv_neighbors[neighbor][dest] + latency
 				for n in self.dv_neighbors:
 					if self.dv_neighbors[n].has_key(dest):
 						if self.dv_neighbors[n][dest] + self.neighbor_latency[n] < new_cost:
 							new_next_hop = n
 							new_cost = self.dv_neighbors[n][dest] + self.neighbor_latency[n]
 							ru.add_destination(dest, self.dv_neighbors[n][dest] + self.neighbor_latency[n])
-		send_RU(ru)
+		# self.send_RU(ru)
 
     def handle_ru(self, packet):
         #print "hello RU"
@@ -104,7 +108,7 @@ class DVRouter (Entity):
 								send_update = True
 								ru.add_destination(dest, self.dv_neighbors[n][dest] + self.neighbor_latency[n])
 
-				if packet.get_distance(dest) + latency < self.dv[dest][1]:
+				elif packet.get_distance(dest) + latency < self.dv[dest][1]:
 					self.dv[dest] = [packet.src, packet.get_distance(dest) + latency]
 					send_update = True
 					ru.add_destination(dest, self.dv[dest][1])
