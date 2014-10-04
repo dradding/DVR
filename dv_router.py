@@ -82,7 +82,7 @@ class DVRouter (Entity):
 							new_next_hop = n
 							new_cost = self.dv_neighbors[n][dest] + self.neighbor_latency[n]
 							ru.add_destination(dest, self.dv_neighbors[n][dest] + self.neighbor_latency[n])
-		# self.send_RU(ru)
+		self.send_RU(ru)
 
     def handle_ru(self, packet):
         #print "hello RU"
