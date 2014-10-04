@@ -224,6 +224,9 @@ class DVRouter (Entity):
                 #         update_to_send.add_destination(host, float("inf"))
                 #     send_update = True
                 # #elif (current_cost_to_host == new_cost_to_host) need to add case if their equal set to lowest port#
+                if(from_source_to_host == float("inf") and self.dv[host][0] != packet.src):
+                    update_to_send.add_destination(host, self.dv[host][1])
+                    send_update = True;
                 if(from_source_to_host == float("inf") and self.dv[host][0] == packet.src and self.dv[host][1] != float("inf")):
                     print "in this bitch rightche"
                     if(host in self.my_hosts): # i have a direct link to host
