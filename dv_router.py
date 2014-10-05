@@ -256,6 +256,7 @@ class DVRouter (Entity):
                         send_update = True;
 
             if send_update:
-                self.simple_send_RU(update_to_send)
+                #self.simple_send_RU(update_to_send)
+                self.send_RU(update_to_send)
 
 
