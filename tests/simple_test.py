@@ -165,14 +165,18 @@ time.sleep(15)
 print "unlinking s3 and s4"
 topo.unlink(s3, s4)
 time.sleep(15)
-print "pinging once again"
+print "pinging h1b to h2b again"
 h1b.ping(h2b)
 time.sleep(15)
 #topo.unlink(s2, s1)
 time.sleep(15)
+print "h1b pings h1a"
 h1b.ping(h1a)
 time.sleep(15)
+print "h2b pings h2a"
 h2b.ping(h2a)
+time.sleep(15)
+
 
 
 
