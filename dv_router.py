@@ -202,10 +202,6 @@ class DVRouter (Entity):
                 update_to_send.add_destination(host, total_cost)
                 send_update = True
             else: #i have this host in my dv
-                if (self.dv[host][0] == packet.src):
-                    print "it actually is OO"
-
-
                 # current_cost_to_host = self.dv[host][1]
                 # new_cost_to_host = from_source_to_host + self.neighbor_latency[packet.src]
                 # if (current_cost_to_host > new_cost_to_host and from_source_to_host is not float("inf")):
@@ -224,8 +220,9 @@ class DVRouter (Entity):
                 #         update_to_send.add_destination(host, float("inf"))
                 #     send_update = True
                 # #elif (current_cost_to_host == new_cost_to_host) need to add case if their equal set to lowest port#
-                if(from_source_to_host == float("inf") and self.dv[host][0] != packet.src):
+                if(from_source_to_host == float("inf") and self.dv[host][0] != packet.src and self.dv[host][1] != float("inf")):
                     update_to_send.add_destination(host, self.dv[host][1])
+                    print " in this case "
                     send_update = True;
                 if(from_source_to_host == float("inf") and self.dv[host][0] == packet.src and self.dv[host][1] != float("inf")):
                     print "in this bitch rightche"
@@ -243,7 +240,6 @@ class DVRouter (Entity):
                     send_update = True;
 
                 elif ((self.dv[host][0] == packet.src) and (from_source_to_host != float("inf"))):
-                    print " this is the fuck up "
 
                     total = from_source_to_host + self.neighbor_latency[packet.src]
                     if (self.dv[host][1] != (total)):
