@@ -35,11 +35,8 @@ class DVRouter (Entity):
                 self.handle_data(packet)
 
     def handle_data(self, packet):
-        print "dv"
-        print self.dv
         next_hop = self.dv[packet.dst][0]
         port_num = self.neighbor_ports[next_hop]
-        print next_hop
         self.send(packet, port_num)
 
     def handle_dp(self, packet, port): #takes in a discovery packet
@@ -73,14 +70,11 @@ class DVRouter (Entity):
                 self.send_RU(update_to_send)
 
             elif (isinstance(packet.src, Entity)):
-                print "were up in here "
+
                 self.neighbor_latency[packet.src] = float("inf")
                 for key in self.dv:
 
                     if self.dv[key][0] == packet.src: #a path has the link that doesn't exist
-                        print " is your girl on the pill ?"
-                        print self.name
-                        print self.neighbor_latency
                         if key in self.my_hosts:
                             self.dv[key] = [key, self.my_hosts[key]]
                         else:
@@ -120,8 +114,6 @@ class DVRouter (Entity):
                 for dest in dests:
                     if self.dv.has_key(dest):
                         if self.dv[dest][0] == key:
-                            print 'problems'
-                            print self.dv[dest][0]
                             Custom_RU.add_destination(dest, float("inf"))
                         else:
                             Custom_RU.add_destination(dest, RU.get_distance(dest))
@@ -157,7 +149,6 @@ class DVRouter (Entity):
                 # print "total cost is: "
                 # print total_cost
                 self.dv[host] = [packet.src, total_cost] #what if inf
-                print(self.dv)
                 update_to_send.add_destination(host, total_cost)
                 send_update = True
             else: #i have this host in my dv
@@ -181,10 +172,8 @@ class DVRouter (Entity):
                 # #elif (current_cost_to_host == new_cost_to_host) need to add case if their equal set to lowest port#
                 if(from_source_to_host == float("inf") and self.dv[host][0] != packet.src and self.dv[host][1] != float("inf")):
                     update_to_send.add_destination(host, self.dv[host][1])
-                    print " in this case "
                     send_update = True;
                 if(from_source_to_host == float("inf") and self.dv[host][0] == packet.src and self.dv[host][1] != float("inf")):
-                    print "in this bitch rightche"
                     if(host in self.my_hosts): # i have a direct link to host
                         self.dv[host] = [host, self.my_hosts[host]]
                         update_to_send.add_destination(host, self.my_hosts[host])
