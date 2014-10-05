@@ -27,11 +27,12 @@ class DVRouter (Entity):
             # print packet.src
             # print packet.paths
             # print "---------------------"
-        	#self.handle_ru(packet)
+        	#self.handle_ru(packet) 
             self.create_routing_update(packet)
         else: #Data packet, foward approroately
         	#Look up best path in DV, send to appropriate neighbor
-			self.handle_data(packet)
+            if (self.dv.has_key(packet.dst) and self.dv[packet.dst][1] != float("inf")):
+                self.handle_data(packet)
 
     def handle_data(self, packet):
         print "dv"
@@ -72,10 +73,14 @@ class DVRouter (Entity):
                 self.send_RU(update_to_send)
 
             elif (isinstance(packet.src, Entity)):
+                print "were up in here "
                 self.neighbor_latency[packet.src] = float("inf")
                 for key in self.dv:
 
                     if self.dv[key][0] == packet.src: #a path has the link that doesn't exist
+                        print " is your girl on the pill ?"
+                        print self.name
+                        print self.neighbor_latency
                         if key in self.my_hosts:
                             self.dv[key] = [key, self.my_hosts[key]]
                         else:
@@ -83,7 +88,7 @@ class DVRouter (Entity):
                         update_to_send.add_destination(key, self.dv[key][1])
                 #update_to_send.paths = self.neighbor_latency
                 #self.update_dv(packet.src)
-                self.simple_send_RU(update_to_send)
+                self.send_RU(update_to_send)
     
     def update_dv_neighbors(self, packet, dest):
 		if self.dv_neighbors.has_key(packet.src):
@@ -106,43 +111,6 @@ class DVRouter (Entity):
 		# 					ru.add_destination(dest, self.dv_neighbors[n][dest] + self.neighbor_latency[n])
 		# self.send_RU(ru)
 
-    def handle_ru(self, packet):
-        #print "hello RU"
-
-    	ru = RoutingUpdate()
-        #print self.dv
-    	if self.neighbor_latency.has_key(packet.src):
-    		latency = self.neighbor_latency[packet.src]
-    	else:
-    		latency = float("inf")
-    	send_update = False
-    	destinations = packet.all_dests()
-    	for dest in destinations: #add tie breaking via lower port number
-			self.update_dv_neighbors(packet, dest)
-			if self.dv.has_key(dest):
-				if packet.get_distance(dest) + latency > self.dv[dest][1]:
-					new_next_hop = packet.src
-					new_cost = packet.get_distance(dest) + latency
-					# for n in self.dv_neighbors:
-					# 	if self.dv_neighbors[n].has_key(dest):
-					# 		if self.dv_neighbors[n][dest] + self.neighbor_latency[n] < new_cost:
-					# 			new_next_hop = n
-					# 			new_cost = self.dv_neighbors[n][dest] + self.neighbor_latency[n]
-					# 			send_update = True
-					# 			ru.add_destination(dest, self.dv_neighbors[n][dest] + self.neighbor_latency[n])
-
-				if packet.get_distance(dest) + latency < self.dv[dest][1]:
-					self.dv[dest] = [packet.src, packet.get_distance(dest) + latency]
-					send_update = True
-					ru.add_destination(dest, self.dv[dest][1])
-					#Update RU object here
-			else:
-				send_update = True
-				self.dv[dest] = [packet.src, packet.get_distance(dest) + latency]
-				ru.add_destination(dest, self.dv[dest][1])
-		
-			if send_update:
-				self.simple_send_RU(ru)
 
     def send_RU(self, RU):
         dests = RU.all_dests()
@@ -170,15 +138,6 @@ class DVRouter (Entity):
 
 
 
-    def update_dv2(self, new_routes):
-        destinations = new_routes.all_dests();
-        for location in destinations:
-            cost_to_new_route = new_routes.get_distance(location) + self.neighbor_latency[packet.src]
-            if(self.dv.has_key(location)):
-                if(self.dv[location][1] > cost_to_new_route):
-                    self.dv[location] = [packet.src, cost_to_new_route]
-                elif((self.dv[location][1] == cost_to_new_route) and (self.neighbor_ports[packet.src] < self.dv[location][0])):
-                    self.dv[location] = [packet.src, cost_to_new_route]
 
 
     def create_routing_update(self, packet):
