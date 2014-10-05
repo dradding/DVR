@@ -35,9 +35,10 @@ class DVRouter (Entity):
                 self.handle_data(packet)
 
     def handle_data(self, packet):
-        next_hop = self.dv[packet.dst][0]
-        port_num = self.neighbor_ports[next_hop]
-        self.send(packet, port_num)
+        if self.dv[packet.dst][1] < 50:
+            next_hop = self.dv[packet.dst][0]
+            port_num = self.neighbor_ports[next_hop]
+            self.send(packet, port_num)
 
     def handle_dp(self, packet, port): #takes in a discovery packet
         #print "hello DP"
