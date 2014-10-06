@@ -172,6 +172,8 @@ time.sleep(15)
 # #topo.unlink(s2, s4)
 # time.sleep(10)
 print "re link s2 and s4 with a higher latency"
+
+topo.unlink(s2,s4)
 topo.link(s2, s4, 5)
 time.sleep(60)
 print "h1b pings h1a again s1-s3 is shortest path"
