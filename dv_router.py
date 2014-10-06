@@ -43,50 +43,49 @@ class DVRouter (Entity):
     def handle_dp(self, packet, port): #takes in a discovery packet
         #print "hello DP"
         update_to_send = RoutingUpdate()
+        update_to_path = RoutingUpdate()
         self.neighbor_ports[packet.src] = port
 
         if (packet.is_link_up):
-            if (isinstance(packet.src, BasicHost)):
+            print self.name
+            print self.dv
+            self.dv[packet.src] = [packet.src, packet.latency]
+            #self.my_hosts[packet.src] = packet.latency
+            update_to_path.paths = self.neighbor_latency
+            self.send(update_to_path, port)
+            #update_to_send.paths = self.neighbor_latency
+            self.neighbor_latency[packet.src] = packet.latency
+            update_to_send.add_destination(packet.src, packet.latency)
+            self.simple_send_RU(update_to_send)
+            #self.neighbor_latency[packet.src] = packet.latency
+            self.neighbor_ports[packet.src] = port
+            #self.neighbor_ports[packet.src] = port
 
-                self.dv[packet.src] = [packet.src, packet.latency]
-                self.my_hosts[packet.src] = packet.latency
-                self.neighbor_latency[packet.src] = packet.latency
-                update_to_send.add_destination(packet.src, packet.latency)
-                self.simple_send_RU(update_to_send)
- 
-            elif(isinstance(packet.src, Entity)):
-                print "link changes"
-                print "yolo"
-                self.neighbor_latency[packet.src] = packet.latency
-                #self.neighbor_ports[packet.src] = port
-                update_to_send.paths = self.my_hosts
-                self.simple_send_RU(update_to_send)
-                self.update_dv(packet.src)
+            #self.simple_send_RU(update_to_send)
+            #self.update_dv(packet.src)
             # self.dv[packet.dst] = [packet.src, packet.latency]
             # self.neighbor_latency[packet.src] = packet.latency
 
         elif (packet.is_link_up == False): #how to handle ports going down??
-            if (isinstance(packet.src, BasicHost)):
-                self.dv[packet.src] = [self, float("inf")]
-                self.neighbor_latency[packet.src] = float("inf")
-                update_to_send.add_destination(packet.src, float("inf"))
-                self.my_hosts[packet.src] = packet.latency
-                self.send_RU(update_to_send)
+            self.dv[packet.src] = [self, float("inf")]
+            self.neighbor_latency[packet.src] = float("inf")
+            update_to_path.add_destination(packet.src, float("inf"))
+            #self.my_hosts[packet.src] = packet.latency
+            #self.send_RU(update_to_send)
 
-            elif (isinstance(packet.src, Entity)):
 
-                self.neighbor_latency[packet.src] = float("inf")
-                for key in self.dv:
+            #self.neighbor_latency[packet.src] = float("inf")
+            # for key in self.dv:
 
-                    if self.dv[key][0] == packet.src: #a path has the link that doesn't exist
-                        if key in self.my_hosts:
-                            self.dv[key] = [key, self.my_hosts[key]]
-                        else:
-                            self.dv[key] = [self, float("inf")]
-                        update_to_send.add_destination(key, self.dv[key][1])
-                #update_to_send.paths = self.neighbor_latency
-                #self.update_dv(packet.src)
-                self.send_RU(update_to_send)
+            #     if self.dv[key][0] == packet.src: #a path has the link that doesn't exist
+            #             self.dv[key] = [key, self.neighbor_latency[key]]
+            #     else:
+            #         self.dv[key] = [self, float("inf")]
+            #         update_to_path.add_destination(key, self.dv[key][1])
+            #update_to_send.paths = self.neighbor_latency
+            #self.update_dv(packet.src)
+            self.send_RU(update_to_path)
+
     
     def update_dv_neighbors(self, packet, dest):
 		if self.dv_neighbors.has_key(packet.src):
@@ -147,6 +146,7 @@ class DVRouter (Entity):
             from_source_to_host = packet.get_distance(host)
             
             if(not self.dv.has_key(host)):
+
                 #print" why we not in here doe? "
                 #print('not in dv')
                 total_cost = from_source_to_host + self.neighbor_latency[packet.src]
@@ -156,13 +156,20 @@ class DVRouter (Entity):
                 update_to_send.add_destination(host, total_cost)
                 send_update = True
             else: #i have this host in my dv
+                total_cost = from_source_to_host + self.neighbor_latency[packet.src]
                 if(from_source_to_host == float("inf") and self.dv[host][0] != packet.src and self.dv[host][1] != float("inf")):
                     update_to_send.add_destination(host, self.dv[host][1])
-                    send_update = True;
+                    next_hop = self.dv[host][0]
+                    self.send(update_to_send, self.neighbor_ports[next_hop])
+                    #send_update = True;
                 if(from_source_to_host == float("inf") and self.dv[host][0] == packet.src and self.dv[host][1] != float("inf")):
-                    if(host in self.my_hosts): # i have a direct link to host
-                        self.dv[host] = [host, self.my_hosts[host]]
-                        update_to_send.add_destination(host, self.my_hosts[host])
+                    print "name is :"
+                    print self.name
+                    print "host is: "
+                    print host
+                    if(host in self.neighbor_latency): # i have a direct link to host
+                        self.dv[host] = [host, self.neighbor_latency[host]]
+                        update_to_send.add_destination(host, self.neighbor_latency[host])
                     else: #no direct link to host
                         self.dv[host] = [None, float("inf")]
                         update_to_send.add_destination(host, float("inf"))
@@ -174,20 +181,32 @@ class DVRouter (Entity):
                     send_update = True;
 
                 elif ((self.dv[host][0] == packet.src) and (from_source_to_host != float("inf"))):
-
+                    # print "right in here "
+                    # print "name is: "
+                    # print self.name
+                    # print "host is: "
+                    # print host
                     total = from_source_to_host + self.neighbor_latency[packet.src]
                     if (self.dv[host][1] != (total)):
                         if (self.dv[host][1] > total):
                             self.dv[host] = [self.dv[host][0], total]
-                        elif (host in self.my_hosts):
-                            if (self.my_hosts[host] < total):
-                                self.dv[host] = [host, self.my_hosts[host]] 
+                        elif (host in self.neighbor_latency):
+                            if (self.neighbor_latency[host] < total):
+                                self.dv[host] = [host, self.neighbor_latency[host]] 
+                                update_to_send.add_destination(host, self.neighbor_latency[host])
                             else:
                                 self.dv[host] = [self.dv[host][0], total]
+                                update_to_send.add_destination(self.dv[host][0], self.dv[host][1])
                         else:
                             self.dv[host] = [self.dv[host][0], total]
-                        update_to_send.add_destination(self.dv[host][0], self.dv[host][1])
-                        send_update = True;
+                            update_to_send.add_destination(self.dv[host][0], total)
+                        send_update = True
+                elif (self.dv[host][0] != packet.src):
+                    print " in this case " 
+                    if (self.dv[host][1] > from_source_to_host + self.neighbor_latency[packet.src]):
+                        self.dv[host] = [packet.src,from_source_to_host + self.neighbor_latency[packet.src]]
+
+                        send_update = True
 
             if send_update:
                 #self.simple_send_RU(update_to_send)
