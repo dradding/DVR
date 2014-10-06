@@ -17,75 +17,57 @@ class DVRouter (Entity):
     def handle_rx (self, packet, port):
         # Add your code here!
         if isinstance(packet, DiscoveryPacket):
-            # print "dp: ----------------------"
-            # print packet.src
-            # print packet.latency
-            # print "dp end: --------------------"
             self.handle_dp(packet, port)
         elif isinstance(packet, RoutingUpdate):
-            # print "---------------------"
-            # print packet.src
-            # print packet.paths
-            # print "---------------------"
-        	#self.handle_ru(packet) 
             self.create_routing_update(packet)
         else: #Data packet, foward approroately
-        	#Look up best path in DV, send to appropriate neighbor
             if (self.dv.has_key(packet.dst) and self.dv[packet.dst][1] != float("inf")):
                 self.handle_data(packet)
 
     def handle_data(self, packet):
-        if self.dv[packet.dst][1] < 50:
-            next_hop = self.dv[packet.dst][0]
-            port_num = self.neighbor_ports[next_hop]
-            self.send(packet, port_num)
+        next_hop = self.dv[packet.dst][0]
+        port_num = self.neighbor_ports[next_hop]
+        self.send(packet, port_num)
 
     def handle_dp(self, packet, port): #takes in a discovery packet
-        #print "hello DP"
         update_to_send = RoutingUpdate()
-        update_to_path = RoutingUpdate()
         self.neighbor_ports[packet.src] = port
-
+        latency = packet.latency
+        if (latency >= 50):
+            latency = float("inf")
         if (packet.is_link_up):
-            print self.name
-            print self.dv
-            self.dv[packet.src] = [packet.src, packet.latency]
-            #self.my_hosts[packet.src] = packet.latency
-            update_to_path.paths = self.neighbor_latency
-            self.send(update_to_path, port)
-            #update_to_send.paths = self.neighbor_latency
-            self.neighbor_latency[packet.src] = packet.latency
-            update_to_send.add_destination(packet.src, packet.latency)
-            self.simple_send_RU(update_to_send)
-            #self.neighbor_latency[packet.src] = packet.latency
-            self.neighbor_ports[packet.src] = port
-            #self.neighbor_ports[packet.src] = port
-
-            #self.simple_send_RU(update_to_send)
-            #self.update_dv(packet.src)
-            # self.dv[packet.dst] = [packet.src, packet.latency]
-            # self.neighbor_latency[packet.src] = packet.latency
-
+            if (isinstance(packet.src, HostEntity)):
+                self.dv[packet.src] = [packet.src, latency]
+                self.my_hosts[packet.src] = latency
+                self.neighbor_latency[packet.src] = latency
+                update_to_send.add_destination(packet.src, latency)
+                self.simple_send_RU(update_to_send)
+ 
+            elif(not isinstance(packet.src, HostEntity)):
+                self.neighbor_latency[packet.src] = latency
+                update_to_send.paths = self.my_hosts
+                #self.send(update_to_send, self.neighbor_ports[packet.src])
+                self.simple_send_RU(update_to_send)
         elif (packet.is_link_up == False): #how to handle ports going down??
-            self.dv[packet.src] = [self, float("inf")]
-            self.neighbor_latency[packet.src] = float("inf")
-            update_to_path.add_destination(packet.src, float("inf"))
-            #self.my_hosts[packet.src] = packet.latency
-            #self.send_RU(update_to_send)
+            if (isinstance(packet.src, HostEntity)):
+                self.dv[packet.src] = [self, float("inf")]
+                self.neighbor_latency[packet.src] = float("inf")
+                update_to_send.add_destination(packet.src, float("inf"))
+                self.my_hosts[packet.src] = latency
+                self.send_RU(update_to_send)
 
-
-            #self.neighbor_latency[packet.src] = float("inf")
-            # for key in self.dv:
-
-            #     if self.dv[key][0] == packet.src: #a path has the link that doesn't exist
-            #             self.dv[key] = [key, self.neighbor_latency[key]]
-            #     else:
-            #         self.dv[key] = [self, float("inf")]
-            #         update_to_path.add_destination(key, self.dv[key][1])
-            #update_to_send.paths = self.neighbor_latency
-            #self.update_dv(packet.src)
-            self.send_RU(update_to_path)
-
+            elif (not isinstance(packet.src, HostEntity)):
+                self.neighbor_latency[packet.src] = float("inf")
+                for key in self.dv:
+                    if self.dv[key][0] == packet.src: #a path has the link that doesn't exist
+                        if key in self.my_hosts:
+                            self.dv[key] = [key, self.my_hosts[key]]
+                        else:
+                            self.dv[key] = [self, float("inf")]
+                        update_to_send.add_destination(key, self.dv[key][1])
+                #update_to_send.paths = self.neighbor_latency
+                #self.update_dv(packet.src)
+                self.send_RU(update_to_send)
     
     def update_dv_neighbors(self, packet, dest):
 		if self.dv_neighbors.has_key(packet.src):
@@ -93,26 +75,28 @@ class DVRouter (Entity):
 		else:
 			self.dv_neighbors[packet.src] = {dest:packet.get_distance(dest)}
 
-    def update_dv(self, neighbor):
-		latency = self.neighbor_latency[neighbor]
-		ru = RoutingUpdate()
-		for dest in self.dv:
-			if self.dv[dest][0] == neighbor:
-				new_next_hop = neighbor
-				new_cost = self.dv_neighbors[neighbor][dest] + latency
-				for n in self.dv_neighbors:
-					if self.dv_neighbors[n].has_key(dest):
-						if self.dv_neighbors[n][dest] + self.neighbor_latency[n] < new_cost:
-							new_next_hop = n
-							new_cost = self.dv_neighbors[n][dest] + self.neighbor_latency[n]
-							ru.add_destination(dest, self.dv_neighbors[n][dest] + self.neighbor_latency[n])
-		self.send_RU(ru)
+  #   def update_dv(self, neighbor):
+		# latency = self.neighbor_latency[neighbor]
+		# ru = RoutingUpdate()
+		# for dest in self.dv:
+		# 	if self.dv[dest][0] == neighbor:
+		# 		new_next_hop = neighbor
+		# 		new_cost = self.dv_neighbors[neighbor][dest] + latency
+		# 		for n in self.dv_neighbors:
+		# 			if self.dv_neighbors[n].has_key(dest):
+		# 				if self.dv_neighbors[n][dest] + self.neighbor_latency[n] < new_cost:
+		# 					new_next_hop = n
+		# 					new_cost = self.dv_neighbors[n][dest] + self.neighbor_latency[n]
+		# 					ru.add_destination(dest, self.dv_neighbors[n][dest] + self.neighbor_latency[n])
+		# self.send_RU(ru)
 
 
     def send_RU(self, RU):
         dests = RU.all_dests()
         for key in self.neighbor_ports:
-            if (not self.neighbor_latency[key] == float("inf")) and (not isinstance(key, BasicHost)):
+            if (self.neighbor_latency[key] >= 50):
+                self.neighbor_latency[key] = float("inf")
+            if (not self.neighbor_latency[key] == float("inf")) and (not isinstance(key, HostEntity)):
                 Custom_RU = RoutingUpdate()
                 for dest in dests:
                     if self.dv.has_key(dest):
@@ -141,75 +125,46 @@ class DVRouter (Entity):
         send_update = False
         packet_destinations = packet.all_dests()
         for host in packet_destinations:
-            #self.update_dv_neighbors(packet, host)
-
             from_source_to_host = packet.get_distance(host)
-            
             if(not self.dv.has_key(host)):
-
-                #print" why we not in here doe? "
-                #print('not in dv')
                 total_cost = from_source_to_host + self.neighbor_latency[packet.src]
-                # print "total cost is: "
-                # print total_cost
                 self.dv[host] = [packet.src, total_cost] #what if inf
                 update_to_send.add_destination(host, total_cost)
                 send_update = True
             else: #i have this host in my dv
-                total_cost = from_source_to_host + self.neighbor_latency[packet.src]
-                if(from_source_to_host == float("inf") and self.dv[host][0] != packet.src and self.dv[host][1] != float("inf")):
-                    update_to_send.add_destination(host, self.dv[host][1])
-                    next_hop = self.dv[host][0]
-                    self.send(update_to_send, self.neighbor_ports[next_hop])
-                    #send_update = True;
-                if(from_source_to_host == float("inf") and self.dv[host][0] == packet.src and self.dv[host][1] != float("inf")):
-                    print "name is :"
-                    print self.name
-                    print "host is: "
-                    print host
-                    if(host in self.neighbor_latency): # i have a direct link to host
-                        self.dv[host] = [host, self.neighbor_latency[host]]
-                        update_to_send.add_destination(host, self.neighbor_latency[host])
-                    else: #no direct link to host
-                        self.dv[host] = [None, float("inf")]
-                        update_to_send.add_destination(host, float("inf"))
-                    send_update = True;
-
-                elif (self.dv[host][1] == float("inf") and from_source_to_host != float("inf")):
-                    self.dv[host] = [packet.src, from_source_to_host + self.neighbor_latency[packet.src]]
-                    update_to_send.add_destination(host, from_source_to_host + self.neighbor_latency[packet.src])
-                    send_update = True;
-
-                elif ((self.dv[host][0] == packet.src) and (from_source_to_host != float("inf"))):
-                    # print "right in here "
-                    # print "name is: "
-                    # print self.name
-                    # print "host is: "
-                    # print host
-                    total = from_source_to_host + self.neighbor_latency[packet.src]
-                    if (self.dv[host][1] != (total)):
-                        if (self.dv[host][1] > total):
-                            self.dv[host] = [self.dv[host][0], total]
-                        elif (host in self.neighbor_latency):
-                            if (self.neighbor_latency[host] < total):
-                                self.dv[host] = [host, self.neighbor_latency[host]] 
-                                update_to_send.add_destination(host, self.neighbor_latency[host])
+                if ( from_source_to_host == float("inf")):
+                    if(self.dv[host][0] != packet.src and self.dv[host][1] != float("inf")):
+                        update_to_send.add_destination(host, self.dv[host][1])
+                        send_update = True;
+                    if(self.dv[host][0] == packet.src and self.dv[host][1] != float("inf")):
+                        if(host in self.my_hosts): # i have a direct link to host
+                            self.dv[host] = [host, self.my_hosts[host]]
+                            update_to_send.add_destination(host, self.my_hosts[host])
+                        else: #no direct link to host
+                            self.dv[host] = [None, float("inf")]
+                            update_to_send.add_destination(host, float("inf"))
+                        send_update = True;
+                elif (from_source_to_host != float("inf")):
+                    if (self.dv[host][1] == float("inf")):
+                        self.dv[host] = [packet.src, from_source_to_host + self.neighbor_latency[packet.src]]
+                        update_to_send.add_destination(host, from_source_to_host + self.neighbor_latency[packet.src])
+                        send_update = True;
+                    elif ((self.dv[host][0] == packet.src) and (from_source_to_host != float("inf"))):
+                        total = from_source_to_host + self.neighbor_latency[packet.src]
+                        if (self.dv[host][1] != (total)):
+                            if (self.dv[host][1] > total):
+                                self.dv[host] = [self.dv[host][0], total]
+                            elif (host in self.my_hosts):
+                                if (self.my_hosts[host] < total):
+                                    self.dv[host] = [host, self.my_hosts[host]] 
+                                else:
+                                    self.dv[host] = [self.dv[host][0], total]
                             else:
                                 self.dv[host] = [self.dv[host][0], total]
-                                update_to_send.add_destination(self.dv[host][0], self.dv[host][1])
-                        else:
-                            self.dv[host] = [self.dv[host][0], total]
-                            update_to_send.add_destination(self.dv[host][0], total)
-                        send_update = True
-                elif (self.dv[host][0] != packet.src):
-                    print " in this case " 
-                    if (self.dv[host][1] > from_source_to_host + self.neighbor_latency[packet.src]):
-                        self.dv[host] = [packet.src,from_source_to_host + self.neighbor_latency[packet.src]]
-
-                        send_update = True
+                            update_to_send.add_destination(self.dv[host][0], self.dv[host][1])
+                            send_update = True;
 
             if send_update:
-                #self.simple_send_RU(update_to_send)
                 self.send_RU(update_to_send)
 
 
