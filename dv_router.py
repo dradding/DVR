@@ -144,6 +144,11 @@ class DVRouter (Entity):
                             self.dv[host] = [None, float("inf")]
                             update_to_send.add_destination(host, float("inf"))
                         send_update = True;
+                    # elif(self.dv[host][1] ==from_source_to_host + self.neighbor_latency[packet.src] and self.dv[host][0] != packet.src):
+                    #     print self.neighbor_ports[self.dv[host][0]]
+                    #     if (self.neighbor_ports[packet.src] < self.neighbor_ports[self.dv[host][0]]):
+                    #         self.dv[host] = [packet.src, from_source_to_host + self.neighbor_latency[packet.src]]
+                    #         send_update = True
                 elif (from_source_to_host != float("inf")):
                     if (self.dv[host][1] == float("inf")):
                         self.dv[host] = [packet.src, from_source_to_host + self.neighbor_latency[packet.src]]
@@ -163,6 +168,10 @@ class DVRouter (Entity):
                                 self.dv[host] = [self.dv[host][0], total]
                             update_to_send.add_destination(self.dv[host][0], self.dv[host][1])
                             send_update = True;
+                    # elif(self.dv[host][1] ==from_source_to_host + self.neighbor_latency[packet.src] and self.dv[host][0] != packet.src):
+                    #     if (self.neighbor_ports[packet.src] < self.neighbor_ports[self.dv[host][0]]):
+                    #         self.dv[host] = [packet.src, from_source_to_host + self.neighbor_latency[packet.src]]
+                    #         send_update = True
 
             if send_update:
                 self.send_RU(update_to_send)
