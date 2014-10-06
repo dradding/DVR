@@ -8,7 +8,6 @@ class DVRouter (Entity):
     def __init__(self):
         # Add your code here!
         self.dv = {} # destination: [next_hop, cost to dest]
-        self.dv_neighbors = {} # neighbor: neighbor DV
         self.neighbor_ports = {} #Key is neighbor, value is ports
         self.neighbor_latency = {} #neighbor: link-latency
         self.my_hosts = {} #host: link-latency
@@ -65,32 +64,8 @@ class DVRouter (Entity):
                         else:
                             self.dv[key] = [self, float("inf")]
                         update_to_send.add_destination(key, self.dv[key][1])
-                #update_to_send.paths = self.neighbor_latency
-                #self.update_dv(packet.src)
                 self.send_RU(update_to_send)
     
-    def update_dv_neighbors(self, packet, dest):
-		if self.dv_neighbors.has_key(packet.src):
-			self.dv_neighbors[packet.src][dest] = packet.get_distance(dest)
-		else:
-			self.dv_neighbors[packet.src] = {dest:packet.get_distance(dest)}
-
-  #   def update_dv(self, neighbor):
-		# latency = self.neighbor_latency[neighbor]
-		# ru = RoutingUpdate()
-		# for dest in self.dv:
-		# 	if self.dv[dest][0] == neighbor:
-		# 		new_next_hop = neighbor
-		# 		new_cost = self.dv_neighbors[neighbor][dest] + latency
-		# 		for n in self.dv_neighbors:
-		# 			if self.dv_neighbors[n].has_key(dest):
-		# 				if self.dv_neighbors[n][dest] + self.neighbor_latency[n] < new_cost:
-		# 					new_next_hop = n
-		# 					new_cost = self.dv_neighbors[n][dest] + self.neighbor_latency[n]
-		# 					ru.add_destination(dest, self.dv_neighbors[n][dest] + self.neighbor_latency[n])
-		# self.send_RU(ru)
-
-
     def send_RU(self, RU):
         dests = RU.all_dests()
         for key in self.neighbor_ports:
@@ -144,18 +119,19 @@ class DVRouter (Entity):
                             self.dv[host] = [None, float("inf")]
                             update_to_send.add_destination(host, float("inf"))
                         send_update = True;
-                    # elif(self.dv[host][1] ==from_source_to_host + self.neighbor_latency[packet.src] and self.dv[host][0] != packet.src):
-                    #     print self.neighbor_ports[self.dv[host][0]]
-                    #     if (self.neighbor_ports[packet.src] < self.neighbor_ports[self.dv[host][0]]):
-                    #         self.dv[host] = [packet.src, from_source_to_host + self.neighbor_latency[packet.src]]
-                    #         send_update = True
                 elif (from_source_to_host != float("inf")):
+                    total = from_source_to_host + self.neighbor_latency[packet.src]
+                    if self.dv[host][1] == total:
+                        if self.neighbor_ports[packet.src] < self.neighbor_ports[self.dv[host][0]]:
+                            self.dv[host] = [packet.src, from_source_to_host + self.neighbor_latency[packet.src]]
+                            update_to_send.add_destination(host, from_source_to_host + self.neighbor_latency[packet.src])
+                            send_update = True;
+
                     if (self.dv[host][1] == float("inf")):
                         self.dv[host] = [packet.src, from_source_to_host + self.neighbor_latency[packet.src]]
                         update_to_send.add_destination(host, from_source_to_host + self.neighbor_latency[packet.src])
                         send_update = True;
                     elif ((self.dv[host][0] == packet.src) and (from_source_to_host != float("inf"))):
-                        total = from_source_to_host + self.neighbor_latency[packet.src]
                         if (self.dv[host][1] != (total)):
                             if (self.dv[host][1] > total):
                                 self.dv[host] = [self.dv[host][0], total]
@@ -168,10 +144,6 @@ class DVRouter (Entity):
                                 self.dv[host] = [self.dv[host][0], total]
                             update_to_send.add_destination(self.dv[host][0], self.dv[host][1])
                             send_update = True;
-                    # elif(self.dv[host][1] ==from_source_to_host + self.neighbor_latency[packet.src] and self.dv[host][0] != packet.src):
-                    #     if (self.neighbor_ports[packet.src] < self.neighbor_ports[self.dv[host][0]]):
-                    #         self.dv[host] = [packet.src, from_source_to_host + self.neighbor_latency[packet.src]]
-                    #         send_update = True
 
             if send_update:
                 self.send_RU(update_to_send)
