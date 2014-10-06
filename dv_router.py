@@ -54,10 +54,13 @@ class DVRouter (Entity):
                 self.simple_send_RU(update_to_send)
  
             elif(isinstance(packet.src, Entity)):
+                print "link changes"
+                print "yolo"
                 self.neighbor_latency[packet.src] = packet.latency
                 #self.neighbor_ports[packet.src] = port
                 update_to_send.paths = self.my_hosts
                 self.simple_send_RU(update_to_send)
+                self.update_dv(packet.src)
             # self.dv[packet.dst] = [packet.src, packet.latency]
             # self.neighbor_latency[packet.src] = packet.latency
 
@@ -90,20 +93,20 @@ class DVRouter (Entity):
 		else:
 			self.dv_neighbors[packet.src] = {dest:packet.get_distance(dest)}
 
-  #   def update_dv(self, neighbor):
-		# latency = self.neighbor_latency[neighbor]
-		# ru = RoutingUpdate()
-		# for dest in self.dv:
-		# 	if self.dv[dest][0] == neighbor:
-		# 		new_next_hop = neighbor
-		# 		new_cost = self.dv_neighbors[neighbor][dest] + latency
-		# 		for n in self.dv_neighbors:
-		# 			if self.dv_neighbors[n].has_key(dest):
-		# 				if self.dv_neighbors[n][dest] + self.neighbor_latency[n] < new_cost:
-		# 					new_next_hop = n
-		# 					new_cost = self.dv_neighbors[n][dest] + self.neighbor_latency[n]
-		# 					ru.add_destination(dest, self.dv_neighbors[n][dest] + self.neighbor_latency[n])
-		# self.send_RU(ru)
+    def update_dv(self, neighbor):
+		latency = self.neighbor_latency[neighbor]
+		ru = RoutingUpdate()
+		for dest in self.dv:
+			if self.dv[dest][0] == neighbor:
+				new_next_hop = neighbor
+				new_cost = self.dv_neighbors[neighbor][dest] + latency
+				for n in self.dv_neighbors:
+					if self.dv_neighbors[n].has_key(dest):
+						if self.dv_neighbors[n][dest] + self.neighbor_latency[n] < new_cost:
+							new_next_hop = n
+							new_cost = self.dv_neighbors[n][dest] + self.neighbor_latency[n]
+							ru.add_destination(dest, self.dv_neighbors[n][dest] + self.neighbor_latency[n])
+		self.send_RU(ru)
 
 
     def send_RU(self, RU):
@@ -152,24 +155,6 @@ class DVRouter (Entity):
                 update_to_send.add_destination(host, total_cost)
                 send_update = True
             else: #i have this host in my dv
-                # current_cost_to_host = self.dv[host][1]
-                # new_cost_to_host = from_source_to_host + self.neighbor_latency[packet.src]
-                # if (current_cost_to_host > new_cost_to_host and from_source_to_host is not float("inf")):
-
-                #     self.dv[host] = [packet.src, new_cost_to_host]
-                #     update_to_send.add_destination(host, new_cost_to_host)
-                #     send_update = True
-                # elif (from_source_to_host == float("inf")and self.dv[host][0] == packet.src):
-                #     print "this is why "
-                #     if (self.my_hosts.has_key(host)):
-                #         self.dv[host] = [host, self.my_hosts[host]]
-                #         update_to_send.add_destination(host, self.my_hosts[host])
-
-                #     else:
-                #         self.dv[host] = [self, float("inf")]
-                #         update_to_send.add_destination(host, float("inf"))
-                #     send_update = True
-                # #elif (current_cost_to_host == new_cost_to_host) need to add case if their equal set to lowest port#
                 if(from_source_to_host == float("inf") and self.dv[host][0] != packet.src and self.dv[host][1] != float("inf")):
                     update_to_send.add_destination(host, self.dv[host][1])
                     send_update = True;
@@ -200,7 +185,7 @@ class DVRouter (Entity):
                                 self.dv[host] = [self.dv[host][0], total]
                         else:
                             self.dv[host] = [self.dv[host][0], total]
-                        self.update_to_send.add_destination(self.dv[host], self.dv[host][1])
+                        update_to_send.add_destination(self.dv[host][0], self.dv[host][1])
                         send_update = True;
 
             if send_update:
