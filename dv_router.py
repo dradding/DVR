@@ -70,19 +70,24 @@ class DVRouter (Entity):
 			self.dv_neighbors[packet.src] = {dest:packet.get_distance(dest)}
 
     def update_dv(self, neighbor):
-		latency = self.neighbor_latency[neighbor]
-		ru = RoutingUpdate()
-		for dest in self.dv:
-			if self.dv[dest][0] == neighbor:
-				new_next_hop = neighbor
-				new_cost = self.dv_neighbors[neighbor][dest] + latency
-				for n in self.dv_neighbors:
-					if self.dv_neighbors[n].has_key(dest):
-						if self.dv_neighbors[n][dest] + self.neighbor_latency[n] < new_cost:
-							new_next_hop = n
-							new_cost = self.dv_neighbors[n][dest] + self.neighbor_latency[n]
-							ru.add_destination(dest, self.dv_neighbors[n][dest] + self.neighbor_latency[n])
-		self.send_RU(ru)
+        latency = self.neighbor_latency[neighbor]
+        ru = RoutingUpdate()
+        for dest in self.dv:
+            if self.dv[dest][0] == neighbor:
+                if self.dv_neighbors[neighbor][dest] + latency < self.dv[dest][1]:
+                    ru.add_destination(dest, self.dv_neighbors[n][dest] + self.neighbor_latency[n])
+                    self.dv[dest][1] = self.dv_neighbors[neighbor][dest] + latency
+                else:
+                    new_next_hop = neighbor
+                    new_cost = self.dv_neighbors[neighbor][dest] + latency
+                    for n in self.dv_neighbors:
+                        if self.dv_neighbors[n].has_key(dest):
+                            if self.dv_neighbors[n][dest] + self.neighbor_latency[n] < new_cost:
+                                new_next_hop = n
+                                new_cost = self.dv_neighbors[n][dest] + self.neighbor_latency[n]
+                                ru.add_destination(dest, self.dv_neighbors[n][dest] + self.neighbor_latency[n])
+                                self.dv[dest] = [new_next_hop, new_cost]
+        self.send_RU(ru)
 
     def handle_ru(self, packet):
         #print "hello RU"
